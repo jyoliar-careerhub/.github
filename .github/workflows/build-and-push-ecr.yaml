@@ -3,32 +3,8 @@ name: Build and Push to ECR
 on:
   workflow_call:
 
-env:
-  AWS_REGION: ap-northeast-2
-  AWS_ACCOUNT_ID: "986069063944"
-
 jobs:
   build:
-    runs-on:
-      - codebuild-homelab-app-builder-${{ github.run_id }}-${{ github.run_attempt }}
-        image:arm-3.0
-        instance-size:small
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set image tag from git tag
-        run: echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-
-      - name: Login to ECR
-        run: |
-          aws ecr get-login-password --region ${AWS_REGION} \
-            | docker login --username AWS --password-stdin \
-              ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-      - name: Build and Push
-        run: |
-          ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${{ github.event.repository.name }}"
-          docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-          docker push ${ECR_REPO}:${IMAGE_TAG}
+      - run: echo "reusable workflow works"
