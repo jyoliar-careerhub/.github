@@ -1,0 +1,62 @@
+name: Build and Push to ECR
+
+on:
+  workflow_call:
+    inputs:
+      ecr-repo-name:
+        description: "ECR 저장소 이름 (기본: 호출 저장소 이름)"
+        type: string
+        default: ""
+      builder-image:
+        description: "CodeBuild 빌더 이미지 (예: arm-3.0, 3.0)"
+        type: string
+        default: "arm-3.0"
+      instance-size:
+        description: "CodeBuild 인스턴스 크기 (small, medium, large)"
+        type: string
+        default: "small"
+      aws-region:
+        description: "AWS 리전"
+        type: string
+        default: "ap-northeast-2"
+      aws-account-id:
+        description: "AWS 계정 ID"
+        type: string
+        default: "986069063944"
+      dockerfile-context:
+        description: "Docker 빌드 컨텍스트 경로"
+        type: string
+        default: "."
+      image-tag:
+        description: "이미지 태그 (기본: git 태그명)"
+        type: string
+        default: ""
+
+jobs:
+  build:
+    runs-on:
+      - codebuild-homelab-app-builder-${{ github.run_id }}-${{ github.run_attempt }}
+        image:${{ inputs.builder-image }}
+        instance-size:${{ inputs.instance-size }}
+
+    env:
+      AWS_REGION: ${{ inputs.aws-region }}
+      AWS_ACCOUNT_ID: ${{ inputs.aws-account-id }}
+      ECR_REPO_NAME: ${{ inputs.ecr-repo-name || github.event.repository.name }}
+      IMAGE_TAG: ${{ inputs.image-tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${AWS_REGION} \
+            | docker login --username AWS --password-stdin \
+              ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+      - name: Build and Push
+        run: |
+          ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}"
+          docker build -t ${ECR_REPO}:${IMAGE_TAG} ${{ inputs.dockerfile-context }}
+          docker push ${ECR_REPO}:${IMAGE_TAG}
