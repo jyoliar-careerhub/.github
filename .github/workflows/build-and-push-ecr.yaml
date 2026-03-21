@@ -2,52 +2,24 @@ name: Build and Push to ECR
 
 on:
   workflow_call:
-    inputs:
-      ecr-repo-name:
-        description: "ECR 저장소 이름 (기본: 호출 저장소 이름)"
-        type: string
-        default: ""
-      builder-image:
-        description: "CodeBuild 빌더 이미지 (예: arm-3.0, 3.0)"
-        type: string
-        default: "arm-3.0"
-      instance-size:
-        description: "CodeBuild 인스턴스 크기 (small, medium, large)"
-        type: string
-        default: "small"
-      aws-region:
-        description: "AWS 리전"
-        type: string
-        default: "ap-northeast-2"
-      aws-account-id:
-        description: "AWS 계정 ID"
-        type: string
-        default: "986069063944"
-      dockerfile-context:
-        description: "Docker 빌드 컨텍스트 경로"
-        type: string
-        default: "."
-      image-tag:
-        description: "이미지 태그 (기본: git 태그명)"
-        type: string
-        default: ""
+
+env:
+  AWS_REGION: ap-northeast-2
+  AWS_ACCOUNT_ID: "986069063944"
 
 jobs:
   build:
     runs-on:
       - codebuild-homelab-app-builder-${{ github.run_id }}-${{ github.run_attempt }}
-        image:${{ inputs.builder-image }}
-        instance-size:${{ inputs.instance-size }}
-
-    env:
-      AWS_REGION: ${{ inputs.aws-region }}
-      AWS_ACCOUNT_ID: ${{ inputs.aws-account-id }}
-      ECR_REPO_NAME: ${{ inputs.ecr-repo-name || github.event.repository.name }}
-      IMAGE_TAG: ${{ inputs.image-tag || github.ref_name }}
+        image:arm-3.0
+        instance-size:small
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set image tag from git tag
+        run: echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
       - name: Login to ECR
         run: |
@@ -57,6 +29,6 @@ jobs:
 
       - name: Build and Push
         run: |
-          ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}"
-          docker build -t ${ECR_REPO}:${IMAGE_TAG} ${{ inputs.dockerfile-context }}
+          ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${{ github.event.repository.name }}"
+          docker build -t ${ECR_REPO}:${IMAGE_TAG} .
           docker push ${ECR_REPO}:${IMAGE_TAG}
