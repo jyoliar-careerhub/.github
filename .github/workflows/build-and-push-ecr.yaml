@@ -31,6 +31,13 @@ on:
         description: "이미지 태그 (기본: git 태그명)"
         type: string
         default: ""
+    secrets:
+      # private 저장소의 의존(예: provider가 공표한 Go 계약 모듈 — ADR-0020)을 빌드 중에
+      # 받아야 하는 호출자만 넘긴다. 넘기지 않으면 --secret 플래그 자체가 붙지 않으므로
+      # 기존 호출자의 동작은 그대로다.
+      private-deps-token:
+        description: "private 저장소 read 토큰 — Dockerfile에 BuildKit secret 'private_deps_token'으로 전달된다"
+        required: false
 
 jobs:
   build:
@@ -44,6 +51,8 @@ jobs:
       AWS_ACCOUNT_ID: ${{ inputs.aws-account-id }}
       ECR_REPO_NAME: ${{ inputs.ecr-repo-name || github.event.repository.name }}
       IMAGE_TAG: ${{ inputs.image-tag || github.ref_name }}
+      # BuildKit secret은 파일로 마운트된다 — 빌드 인자와 달리 이미지 레이어·history에 남지 않는다
+      DOCKER_BUILDKIT: "1"
 
     steps:
       - name: Checkout
@@ -56,7 +65,14 @@ jobs:
               ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
       - name: Build and Push
+        env:
+          PRIVATE_DEPS_TOKEN: ${{ secrets.private-deps-token }}
         run: |
           ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}"
-          docker build -t ${ECR_REPO}:${IMAGE_TAG} ${{ inputs.dockerfile-context }}
+          # 토큰을 넘긴 호출자에게만 --secret을 붙인다 — 빈 값으로 붙이면 BuildKit이 거부한다
+          SECRET_ARGS=""
+          if [ -n "${PRIVATE_DEPS_TOKEN}" ]; then
+            SECRET_ARGS="--secret id=private_deps_token,env=PRIVATE_DEPS_TOKEN"
+          fi
+          docker build ${SECRET_ARGS} -t ${ECR_REPO}:${IMAGE_TAG} ${{ inputs.dockerfile-context }}
           docker push ${ECR_REPO}:${IMAGE_TAG}
