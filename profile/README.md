@@ -1,17 +1,17 @@
 # jyoliar-careerhub
 
-채용 공고는 Wanted 와 JumpIt 에 따로 있고, 그 회사의 평판은 또 다른 사이트에서 찾아야 했다.
-공고를 한 자리에 모으고 그 회사의 리뷰와 요구 기술을 옆에 붙여 보는 도구를 직접 쓰려고 만들었다.
-동시에 gRPC · 서비스 분리 · 배치 · Kubernetes 를 글이 아니라 운영으로 겪어 보려는 목적이 컸다.
-처음에는 AWS 에 올렸지만 사이드 프로젝트가 감당할 비용이 아니어서 라즈베리파이 홈랩으로 옮겼고, 클라우드는 홈랩이 혼자 할 수 없는 것만 맡는다.
+채용 공고는 Wanted 와 JumpIt 에 따로 있고, 그 회사의 평판은 또 다른 사이트에서 찾아야 했다. \
+공고를 한 자리에 모으고 그 회사의 리뷰와 요구 기술을 옆에 붙여 보는 도구를 직접 쓰려고 만들었다. \
+동시에 gRPC · 서비스 분리 · 배치 · Kubernetes 를 글이 아니라 운영으로 겪어 보려는 목적이 컸다. \
+처음에는 AWS 에 올렸지만 사이드 프로젝트가 감당할 비용이 아니어서 라즈베리파이 홈랩으로 옮겼고, 클라우드는 홈랩이 혼자 할 수 없는 것만 맡는다. \
 지금 공개된 것은 레거시 careerhub 이고, 인증을 Zitadel 로 위임하는 리뉴얼이 진행 중이다.
 
 ## 서비스 구조
 
 ![careerhub 서비스 흐름](./careerhub-service-flow.png)
 
-현재 공개된 레거시 careerhub 의 흐름이다.
-보안 강화를 위해 자체 로그인(auth service)은 인터넷에서 막았고, 인증을 Zitadel 로 위임하는 리뉴얼이 진행 중이다.
+현재 공개된 레거시 careerhub 의 흐름이다. \
+보안 강화를 위해 자체 로그인(auth service)은 인터넷에서 막았고, 인증을 Zitadel 로 위임하는 리뉴얼이 진행 중이다. \
 그래서 그림의 "로그인을 통한 accessToken 발급" 화살표만 지금과 다르다.
 
 **데이터 통합 API** — 프런트가 부르는 유일한 입구다.
@@ -31,27 +31,27 @@
 - **skillscanner** — 각 공고의 요구 기술을 스캔해 posting service 의 색인에 더한다.
 - **review crawler** — TeamBlind 의 기업 리뷰를 review service 에 전달한다.
 
-**저장소와 프런트.**
+**저장소와 프런트.** \
 공고 · 리뷰 · 사용자 데이터는 MongoDB 에, 인증(auth service · Zitadel)은 PostgreSQL 에 있다.
 
 ## 인프라 구조
 
-서비스와 데이터는 전부 홈랩에 있다.
-클라우드는 홈랩이 혼자 할 수 없는 것만 맡는다 — 신뢰의 뿌리 · 비밀 보관 · 오프사이트 백업 · 이미지 레지스트리 · 빌드 러너 · DNS 와 엣지.
-클라우드 쪽은 Terraform 이 만들고(seed), 홈랩의 GitOps 저장소가 소비한다.
+서비스와 데이터는 전부 홈랩에 있다. \
+클라우드는 홈랩이 혼자 할 수 없는 것만 맡는다 — 신뢰의 뿌리 · 비밀 보관 · 오프사이트 백업 · 이미지 레지스트리 · 빌드 러너 · DNS 와 엣지. \
+클라우드 쪽은 Terraform 이 만들고(seed), 홈랩의 GitOps 저장소가 소비한다. \
 방향은 한쪽이다 — Terraform 은 클러스터 안의 산출물을 알지 못하고, 클러스터는 Terraform 의 산출물을 Parameter Store · IAM Role · S3 · 터널 자격증명으로만 받는다.
 
 ### 홈랩(온프레미스)
 
-라즈베리파이(arm64) 여러 대로 만든 Kubernetes 클러스터다.
-컨트롤 플레인은 복수이고 etcd 는 컨트롤 플레인 노드에 같이 산다(stacked).
-노드와 클러스터 하부는 Ansible 이 세운다 — OS 준비 · CRI-O · kubeadm · 방화벽 · kube-vip · Secret 암호화 · 스토리지 디스크 준비.
-컨트롤 플레인 VIP 와 LoadBalancer 서비스의 IP 풀은 kube-vip 가 맡는다.
+라즈베리파이(arm64) 여러 대로 만든 Kubernetes 클러스터다. \
+컨트롤 플레인은 복수이고 etcd 는 컨트롤 플레인 노드에 같이 산다(stacked). \
+노드와 클러스터 하부는 Ansible 이 세운다 — OS 준비 · CRI-O · kubeadm · 방화벽 · kube-vip · Secret 암호화 · 스토리지 디스크 준비. \
+컨트롤 플레인 VIP 와 LoadBalancer 서비스의 IP 풀은 kube-vip 가 맡는다. \
 kubelet 의 서빙 인증서는 CSR 로 받고 kubelet-csr-approver 가 승인한다.
 
-클러스터 안은 전부 GitOps 저장소에서 온다.
-Argo CD 가 ApplicationSet 하나로 bootstrap → controllers → system → services 순서를 강제해 동기화한다.
-Argo CD 보다 먼저 있어야 하는 것(External Secrets · csr-approver · Longhorn · metrics-server)만 helmfile 로 깐다.
+클러스터 안은 전부 GitOps 저장소에서 온다. \
+Argo CD 가 ApplicationSet 하나로 bootstrap → controllers → system → services 순서를 강제해 동기화한다. \
+Argo CD 보다 먼저 있어야 하는 것(External Secrets · csr-approver · Longhorn · metrics-server)만 helmfile 로 깐다. \
 배포는 GitOps 저장소에서 이미지 태그를 PR 로 올리면 Argo CD 가 반영한다 — 클러스터를 고치는 길은 PR 뿐이다.
 
 | 영역 | 컴포넌트 |
@@ -72,7 +72,7 @@ Argo CD 보다 먼저 있어야 하는 것(External Secrets · csr-approver · L
 
 ### AWS
 
-홈랩이 믿을 뿌리와 홈랩 밖에 있어야 안전한 것들이 있다.
+홈랩이 믿을 뿌리와 홈랩 밖에 있어야 안전한 것들이 있다. \
 전부 Terraform 이 만든다.
 
 | 무엇 | 역할 | 홈랩이 닿는 길 |
@@ -85,7 +85,7 @@ Argo CD 보다 먼저 있어야 하는 것(External Secrets · csr-approver · L
 
 ### Cloudflare
 
-도메인과 공개 경로의 입구다.
+도메인과 공개 경로의 입구다. \
 zone · 터널 · 엣지 보호는 Terraform 이 만들고, careerhub 의 DNS 레코드는 클러스터의 external-dns 가 자동으로 만든다.
 
 | 무엇 | 역할 |
@@ -94,12 +94,12 @@ zone · 터널 · 엣지 보호는 Terraform 이 만들고, careerhub 의 DNS �
 | Tunnel | 클러스터의 cloudflared 가 밖으로 연 연결. 공인 IP · 포트 없이 공개 Gateway 까지 트래픽을 넣는다. 터널 자격증명은 Terraform 출력을 사람이 Secret 으로 옮긴다 |
 | 엣지 보호 | 레이트리밋 · AI 봇 차단 · HTTPS 강제 · TLS 하한 · HSTS. 대시보드 토글이 아니라 Terraform 리소스다 |
 
-공개 경로는 인터넷 → Cloudflare 엣지 → Tunnel → 클러스터 안 cloudflared → 공개 Gateway → 서비스다.
+공개 경로는 인터넷 → Cloudflare 엣지 → Tunnel → 클러스터 안 cloudflared → 공개 Gateway → 서비스다. \
 공개 Gateway 는 네임스페이스 전용이고 ClusterIP 라, 사설 Gateway 와 Zitadel 관리면은 밖에서 닿지 않는다.
 
 ### GitHub Actions
 
-서비스 저장소의 CI 다.
+서비스 저장소의 CI 다. \
 인프라 저장소 셋에는 GitHub Actions 가 없다 — Terraform 은 Terraform Cloud 가, 클러스터는 Argo CD 가 반영한다.
 
 - **머지 게이트** — PR 과 prod 브랜치 push 마다 돈다. 순서는 계약 신선도 → 빌드 → 테스트다.
@@ -122,5 +122,5 @@ zone · 터널 · 엣지 보호는 Terraform 이 만들고, careerhub 의 DNS �
 | [jyoliar-k8s](https://github.com/jyoliar-careerhub/jyoliar-k8s) | 클러스터 안 | Argo CD GitOps — 플랫폼 컴포넌트 · 관측 · 데이터베이스 · careerhub 서비스 배포 | 클러스터(onpremise-k8s) · Parameter Store · IAM Role · S3 · ECR · 터널 자격증명(jyoliar-platform-terraform) |
 | [jyoliar-platform-terraform](https://github.com/jyoliar-careerhub/jyoliar-platform-terraform) | 클라우드 seed | Terraform — IAM OIDC Provider 와 IRSA 역할 · Parameter Store · S3 백업 버킷 · CodeBuild 러너와 ECR · Cloudflare zone · 터널 · 엣지 보호 | OIDC 발급자 호스트(onpremise-k8s 의 클러스터 설정) |
 
-서비스 저장소 — careerhub-front · careerhub-api-composer · auth-service · careerhub-posting-service · careerhub-review-service · careerhub-userinfo-service · careerhub-posting-provider · careerhub-posting-skillscanner · careerhub-review-crawler.
+서비스 저장소 — careerhub-front · careerhub-api-composer · auth-service · careerhub-posting-service · careerhub-review-service · careerhub-userinfo-service · careerhub-posting-provider · careerhub-posting-skillscanner · careerhub-review-crawler. \
 서비스 저장소는 비공개다 — 요청 시 열람.
