@@ -120,7 +120,7 @@ zone · 터널 · 엣지 보호는 Terraform 이 만들고, careerhub 의 DNS �
 
 | 저장소 | 층 | 담는 것 | 받는 것 |
 |---|---|---|---|
-| onpremise-k8s ([공개 예정](https://github.com/jyoliar-lab/ops-workflow/issues/73)) | 노드 · 클러스터 하부 | Ansible — OS 준비부터 kubeadm 클러스터 · kube-vip · Secret 암호화 · 스토리지 디스크 준비 · 업그레이드 · Tailscale Subnet Router | — |
+| [onpremise-k8s](https://github.com/jyoliar-careerhub/onpremise-k8s) | 노드 · 클러스터 하부 | Ansible — OS 준비부터 kubeadm 클러스터 · kube-vip · Secret 암호화 · 스토리지 디스크 준비 · 업그레이드 · Tailscale Subnet Router | — |
 | [jyoliar-k8s](https://github.com/jyoliar-careerhub/jyoliar-k8s) | 클러스터 안 | Argo CD GitOps — 플랫폼 컴포넌트 · 관측 · 데이터베이스 · careerhub 서비스 배포 | 클러스터(onpremise-k8s) · Parameter Store · IAM Role · S3 · ECR · 터널 자격증명(jyoliar-platform-terraform) |
 | [jyoliar-platform-terraform](https://github.com/jyoliar-careerhub/jyoliar-platform-terraform) | 클라우드 seed | Terraform — IAM OIDC Provider 와 IRSA 역할 · Parameter Store · S3 백업 버킷 · CodeBuild 러너와 ECR · Cloudflare zone · 터널 · 엣지 보호 | OIDC 발급자 호스트(onpremise-k8s 의 클러스터 설정) |
 
